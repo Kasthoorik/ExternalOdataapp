@@ -1,0 +1,92 @@
+_schema-version: "3.2"
+ID: ExternalOdataapp
+version: 0.0.1
+modules:
+- name: ExternalOdataapp-destination-content
+  type: com.sap.application.content
+  requires:
+  - name: ExternalOdataapp-destination-service
+    parameters:
+      content-target: true
+  - name: ExternalOdataapp_html_repo_host
+    parameters:
+      service-key:
+        name: ExternalOdataapp_html_repo_host-key
+  - name: uaa_ExternalOdataapp
+    parameters:
+      service-key:
+        name: uaa_ExternalOdataapp-key
+  parameters:
+    content:
+      instance:
+        destinations:
+        - Name: com_mydemo_ExternalOdataapp_html_repo_host
+          ServiceInstanceName: ExternalOdataapp-html5-app-host-service
+          ServiceKeyName: ExternalOdataapp_html_repo_host-key
+          sap.cloud.service: com.mydemo
+        - Authentication: OAuth2UserTokenExchange
+          Name: com_mydemo_uaa_ExternalOdataapp
+          ServiceInstanceName: ExternalOdataapp-xsuaa-service
+          ServiceKeyName: uaa_ExternalOdataapp-key
+          sap.cloud.service: com.mydemo
+        existing_destinations_policy: ignore
+  build-parameters:
+    no-source: true
+- name: ExternalOdataapp-app-content
+  type: com.sap.application.content
+  path: .
+  requires:
+  - name: ExternalOdataapp_html_repo_host
+    parameters:
+      content-target: true
+  build-parameters:
+    build-result: resources
+    requires:
+    - artifacts:
+      - orders.zip
+      name: orders
+      target-path: resources/
+- name: orders
+  type: html5
+  path: orders
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+resources:
+- name: ExternalOdataapp-destination-service
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      HTML5Runtime_enabled: true
+      init_data:
+        instance:
+          destinations:
+          - Authentication: NoAuthentication
+            Name: ui5
+            ProxyType: Internet
+            Type: HTTP
+            URL: https://ui5.sap.com
+          existing_destinations_policy: update
+      version: 1.0.0
+    service: destination
+    service-name: ExternalOdataapp-destination-service
+    service-plan: lite
+- name: ExternalOdataapp_html_repo_host
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: html5-apps-repo
+    service-name: ExternalOdataapp-html5-app-host-service
+    service-plan: app-host
+- name: uaa_ExternalOdataapp
+  type: org.cloudfoundry.managed-service
+  parameters:
+    path: ./xs-security.json
+    service: xsuaa
+    service-name: ExternalOdataapp-xsuaa-service
+    service-plan: application
+parameters:
+  deploy_mode: html5-repo
